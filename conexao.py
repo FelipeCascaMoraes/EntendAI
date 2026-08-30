@@ -2,6 +2,7 @@ import telebot
 import os
 from dotenv import load_dotenv  
 from agent import agent
+from handlers.image import baixar_imagem
 
 load_dotenv()  
 
@@ -25,6 +26,15 @@ def responder(message):
     response = agent.run(message.text)
     print("Resposta do agente:", response.content)
     bot.reply_to(message, response.content)
+
+@bot.message_handler(content_types=["photo"])
+def receber_imagem(message):
+    caminho = baixar_imagem(bot, message)
+
+    bot.reply_to(
+        message,
+        f"Imagem recebida! Salvei em: {caminho}"
+    )
 
 print('EntendAI está online e pronto para ajudar!')
 bot.infinity_polling()
