@@ -1,6 +1,7 @@
 import telebot
 import os
 from dotenv import load_dotenv  
+from agent import agent
 
 load_dotenv()  
 
@@ -17,8 +18,14 @@ if not nvidia_api_key:
 bot = telebot.TeleBot(telegram_api_key)
 
 @bot.message_handler(commands=['start'])
-def mensagem_bot(mensagem):
-    bot.reply_to(mensagem, "Olá! Eu sou o EntendAI, seu assistente de IA. Como posso ajudá-lo hoje?")
+def start(message):
+    bot.reply_to(message, "Olá! Eu sou o EntendAI, seu tutor educacional. Envie-me um exercício e eu vou ajudá-lo a entender como resolvê-lo passo a passo.")
 
-print('Bot iniciado. Aguardando mensagens...')
-bot.polling()
+@bot.message_handler(func=lambda message: True)
+def responder(message):
+    response = agent.run(message.text)
+    print("Resposta do agente:", response.content)
+    bot.reply_to(message, response.content)
+
+print('EntedAI está online e pronto para ajudar!')
+bot.infinity_polling()
