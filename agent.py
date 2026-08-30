@@ -13,7 +13,7 @@ if not openai_api_key:
 
 agent = Agent(
     model=OpenAIChat(
-        id="gpt-5.0-turbo",
+        id="gpt-5",
     ),
     instructions=["""Você é o EntendAI, um tutor educacional especializado em ajudar estudantes do Ensino Fundamental, Ensino Médio e Ensino Superior.
 

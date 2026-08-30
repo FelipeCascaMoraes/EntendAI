@@ -2,7 +2,7 @@ import telebot
 import os
 from dotenv import load_dotenv  
 from agent import agent
-from handlers.image import baixar_imagem
+from handlers.image import baixar_imagem, analisar_imagem
 
 load_dotenv()  
 
@@ -29,12 +29,24 @@ def responder(message):
 
 @bot.message_handler(content_types=["photo"])
 def receber_imagem(message):
-    caminho = baixar_imagem(bot, message)
+    caminho = None
+    try:
+        bot.send_chat_action(message.chat.id, "typing")
 
-    bot.reply_to(
-        message,
-        f"Imagem recebida! Salvei em: {caminho}"
-    )
+        caminho = baixar_imagem(bot, message)
+        resposta = analisar_imagem(caminho, legenda=message.caption)
+
+        print("Resposta do agente (imagem):", resposta)
+        bot.reply_to(message, resposta)
+    except Exception as erro:
+        print("Erro ao analisar imagem:", erro)
+        bot.reply_to(
+            message,
+            "Não consegui ler essa imagem. Tente enviar novamente com mais luz e foco.",
+        )
+    finally:
+        if caminho and os.path.exists(caminho):
+            os.remove(caminho)
 
 print('EntendAI está online e pronto para ajudar!')
 bot.infinity_polling()
