@@ -6,14 +6,13 @@ from agent import agent
 load_dotenv()  
 
 telegram_api_key = os.getenv("TELEGRAM_API_KEY")
-nvidia_api_key = os.getenv("NVIDIA_API_KEY")
+openai_api_key = os.getenv("OPENAI_API_KEY")
 
 if not telegram_api_key:
     print("TELEGRAM_API_KEY não encontrado no arquivo .env")
 
-
-if not nvidia_api_key:
-    print("NVIDIA_API_KEY não encontrado no arquivo .env")
+if not openai_api_key:
+    print("OPENAI_API_KEY não encontrado no arquivo .env")
 
 bot = telebot.TeleBot(telegram_api_key)
 
@@ -27,5 +26,5 @@ def responder(message):
     print("Resposta do agente:", response.content)
     bot.reply_to(message, response.content)
 
-print('EntedAI está online e pronto para ajudar!')
+print('EntendAI está online e pronto para ajudar!')
 bot.infinity_polling()

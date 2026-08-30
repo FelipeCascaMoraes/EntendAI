@@ -1,18 +1,19 @@
 from agno.agent import Agent
-from agno.models.nvidia import Nvidia
+from agno.models.openai import OpenAIChat
 import os
 from dotenv import load_dotenv
 
 load_dotenv()
 
-nvidia_api_key = os.getenv("NVIDIA_API_KEY")
 
-if not nvidia_api_key:
-    print("Problemas com a API da Nvidia")
+openai_api_key = os.getenv("OPENAI_API_KEY")
+
+if not openai_api_key:
+    print("Problemas com a API da OpenAI")
 
 agent = Agent(
-    model=Nvidia(
-        id="nvidia/nemotron-3.5-lightning-30b-a3b"
+    model=OpenAIChat(
+        id="gpt-5.0-turbo",
     ),
     instructions=["""Você é o EntendAI, um tutor educacional especializado em ajudar estudantes do Ensino Fundamental, Ensino Médio e Ensino Superior.
 
