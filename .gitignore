@@ -2,3 +2,11 @@
 .venv
 __pycache__/
 temp/
+
+# Banco com as conversas dos alunos. NUNCA versionar: são dados pessoais.
+*.db
+*.db-journal
+*.sqlite3
+entendai.db-shm
+entendai.db-wal
+entendai.db 

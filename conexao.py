@@ -71,7 +71,12 @@ def receber_imagem(message):
         bot.send_chat_action(message.chat.id, "typing")
 
         caminho = baixar_imagem(bot, message)
-        resposta = analisar_imagem(caminho, legenda=message.caption)
+        resposta = analisar_imagem(
+            caminho,
+            legenda=message.caption,
+            session_id=str(message.chat.id),
+            user_id=str(message.from_user.id),
+        )
 
         log("Resposta do agente (imagem) gerada com sucesso.")
         enviar_resposta(bot, message, resposta)
@@ -119,7 +124,14 @@ def responder(message):
     try:
         bot.send_chat_action(message.chat.id, "typing")
 
-        resposta = agent.run(message.text)
+        # session_id/user_id são ESSENCIAIS: eles separam a memória de cada
+        # aluno. Sem isso, todo mundo cairia na mesma conversa e um aluno
+        # veria o contexto do outro.
+        resposta = agent.run(
+            message.text,
+            session_id=str(message.chat.id),
+            user_id=str(message.from_user.id),
+        )
 
         # `resposta.content` pode vir None se o modelo não retornar texto.
         conteudo = getattr(resposta, "content", None)

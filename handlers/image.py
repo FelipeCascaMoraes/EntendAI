@@ -36,12 +36,16 @@ def baixar_imagem(bot, message):
     return caminho
 
 
-def analisar_imagem(caminho, legenda=None):
+def analisar_imagem(caminho, legenda=None, session_id=None, user_id=None):
     """
     Envia a imagem para o agente EntendAI resolver o exercício.
 
     `legenda` é o texto que o aluno escreveu junto com a foto (o caption do
     Telegram). Ele costuma trazer contexto importante, tipo "só a questão 3".
+
+    `session_id`/`user_id` fazem a foto entrar na MESMA memória das mensagens
+    de texto. Sem eles, o aluno mandaria a foto e, ao perguntar depois
+    "não entendi a questão 3", o agente não saberia de qual lista se trata.
     """
     instrucao = (
         "O aluno enviou a foto de um exercício. "
@@ -55,7 +59,12 @@ def analisar_imagem(caminho, legenda=None):
     if legenda:
         instrucao += f"\n\nObservação enviada pelo aluno: {legenda}"
 
-    resposta = agent.run(instrucao, images=[Image(filepath=caminho)])
+    resposta = agent.run(
+        instrucao,
+        images=[Image(filepath=caminho)],
+        session_id=session_id,
+        user_id=user_id,
+    )
 
     # getattr com valor padrão evita AttributeError caso o retorno mude.
     return getattr(resposta, "content", None)
