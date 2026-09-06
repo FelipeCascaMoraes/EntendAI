@@ -12,6 +12,7 @@ texto, que fica sempre por último.
 """
 
 import os
+import time
 
 import telebot
 from dotenv import load_dotenv
@@ -134,7 +135,38 @@ def responder(message):
         enviar_resposta(bot, message, MENSAGEM_ERRO_GENERICA)
 
 
+def iniciar():
+    """
+    Mantém o bot no ar mesmo quando a internet oscila.
+
+    O `infinity_polling` reconecta sozinho na maioria dos casos, MAS ele morre
+    quando a conexão com a api.telegram.org estoura o tempo limite
+    (`ReadTimeout`) ou quando um handler levanta uma exceção que ele repassa.
+    Quando isso acontece, o processo simplesmente encerra e o bot fica offline
+    sem ninguém perceber.
+
+    Este laço garante que, se o polling cair, esperamos alguns segundos e
+    começamos de novo — em vez de deixar o bot morto.
+    """
+    while True:
+        try:
+            log("EntendAI está online e pronto para ajudar!")
+            # timeout: quanto esperamos por uma resposta da API.
+            # long_polling_timeout: quanto a API segura a conexão aberta
+            # esperando chegar mensagem nova.
+            bot.infinity_polling(timeout=30, long_polling_timeout=30)
+
+            # Se o infinity_polling retornar sem erro, foi encerramento normal.
+            break
+
+        except Exception as erro:
+            log("Polling caiu, reiniciando em 5s. Motivo:", repr(erro))
+            time.sleep(5)
+
+
 if __name__ == "__main__":
-    log("EntendAI está online e pronto para ajudar!")
-    # timeout menor + long_polling_timeout evita ficar preso numa conexão morta.
-    bot.infinity_polling(timeout=30, long_polling_timeout=30)
+    try:
+        iniciar()
+    except KeyboardInterrupt:
+        # Ctrl+C no terminal: encerra limpo, sem cuspir traceback feio.
+        log("EntendAI encerrado pelo usuário.")
