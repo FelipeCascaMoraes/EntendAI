@@ -19,6 +19,7 @@ from dotenv import load_dotenv
 
 from agent import agent
 from handlers.image import baixar_imagem, analisar_imagem
+from handlers.pdf import baixar_pdf, analisar_pdf, eh_pdf
 from handlers.telegram_utils import log, enviar_resposta
 
 load_dotenv()
@@ -42,6 +43,9 @@ MENSAGEM_ERRO_GENERICA = (
     "Pode tentar enviar de novo?"
 )
 
+# Limite do próprio Telegram para bots baixarem arquivo via getFile.
+LIMITE_TAMANHO_PDF = 20 * 1024 * 1024  # 20 MB
+
 
 # ---------------------------------------------------------------------------
 # 1) Comandos (/start e /ajuda) — precisam vir primeiro
@@ -55,6 +59,7 @@ def start(message):
         "Você pode:\n"
         "• escrever o exercício em texto;\n"
         "• mandar uma **foto** da questão;\n"
+        "• enviar um **PDF** com o exercício ou a lista;\n"
         "• pedir só uma **dica** se quiser tentar sozinho;\n"
         "• dizer *não entendi* que eu explico de outro jeito.",
     )
@@ -100,24 +105,83 @@ def receber_imagem(message):
 
 
 # ---------------------------------------------------------------------------
-# 3) Tipos que ainda não sabemos tratar
-#    Sem este handler, o aluno mandava um áudio/PDF e o bot ficava MUDO,
-#    porque nenhum handler casava com a mensagem.
+# 3) Documentos (PDF)
+#    "document" no Telegram cobre qualquer tipo de arquivo, não só PDF —
+#    por isso filtramos pelo mime_type antes de tentar processar.
 # ---------------------------------------------------------------------------
-@bot.message_handler(
-    content_types=["document", "voice", "audio", "video", "video_note", "sticker"]
-)
+@bot.message_handler(content_types=["document"])
+def receber_documento(message):
+    documento = message.document
+
+    if not eh_pdf(documento):
+        enviar_resposta(
+            bot,
+            message,
+            "Por enquanto eu entendo apenas **texto**, **fotos** e **PDF** de "
+            "exercícios. Manda o enunciado escrito, tira uma foto da questão "
+            "ou envia em PDF.",
+        )
+        return
+
+    if documento.file_size and documento.file_size > LIMITE_TAMANHO_PDF:
+        enviar_resposta(
+            bot,
+            message,
+            "Esse PDF é grande demais para eu conseguir ler (limite de 20 MB). "
+            "Tenta enviar um arquivo menor ou só as páginas que importam.",
+        )
+        return
+
+    caminho = None
+    try:
+        bot.send_chat_action(message.chat.id, "typing")
+
+        caminho = baixar_pdf(bot, message)
+        resposta = analisar_pdf(
+            caminho,
+            legenda=message.caption,
+            session_id=str(message.chat.id),
+            user_id=str(message.from_user.id),
+        )
+
+        log("Resposta do agente (PDF) gerada com sucesso.")
+        enviar_resposta(bot, message, resposta)
+
+    except Exception as erro:
+        log("Erro ao analisar PDF:", repr(erro))
+        enviar_resposta(
+            bot,
+            message,
+            "Não consegui ler esse PDF. Verifica se o arquivo não está "
+            "corrompido ou tenta enviar o enunciado em texto.",
+        )
+    finally:
+        # Apaga o arquivo temporário mesmo se deu erro no meio do caminho.
+        if caminho and os.path.exists(caminho):
+            try:
+                os.remove(caminho)
+            except OSError as erro:
+                log("Não consegui apagar o arquivo temporário:", repr(erro))
+
+
+# ---------------------------------------------------------------------------
+# 4) Tipos que ainda não sabemos tratar
+#    Sem este handler, o aluno mandava um áudio e o bot ficava MUDO, porque
+#    nenhum handler casava com a mensagem.
+# ---------------------------------------------------------------------------
+@bot.message_handler(content_types=["voice", "audio", "video", "video_note", "sticker"])
 def tipo_nao_suportado(message):
     enviar_resposta(
         bot,
         message,
-        "Por enquanto eu entendo apenas **texto** e **fotos** de exercícios. "
-        "Manda o enunciado escrito ou tira uma foto da questão. 🙂",
+        "Por enquanto eu entendo apenas **texto**, **fotos** e **PDF** de "
+        "exercícios. Manda o enunciado escrito, tira uma foto da questão ou "
+        "envia em PDF. 🙂",
     )
 
 
 # ---------------------------------------------------------------------------
-# 4) Texto comum — SEMPRE o último handler registrado
+# 5) Texto comum — SEMPRE o último handler registrado
 # ---------------------------------------------------------------------------
 @bot.message_handler(func=lambda message: True, content_types=["text"])
 def responder(message):
